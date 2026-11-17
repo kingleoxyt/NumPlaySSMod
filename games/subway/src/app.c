@@ -13,10 +13,11 @@
 #include "save.h"
 #include "scene.h"
 
-enum { S_HELP, S_TITLE, S_RUN, S_PAUSE, S_SAVEME, S_RESULTS, S_SHOP, S_MISSIONS, S_QUIT };
+enum { S_HELP, S_TITLE, S_RUN, S_PAUSE, S_SAVEME, S_RESULTS, S_SHOP, S_MISSIONS, S_QUIT, S_ADMIN };
 bool app_running = true;
 static int state, back_to;      /* the screen, and where Back goes from the shop, the missions or Quit */
 static int sel;                 /* the button in focus */
+static int admin_from;          /* the screen the admin panel was opened from (S_TITLE or S_PAUSE) */
 static int qsel;                /* the quit question's (the screen behind keeps its own) */
 static float clock, intro, saveme_t, state_t;
 static bool new_best;
@@ -62,7 +63,8 @@ static void title_world(void) {
 
 /* the title's yard behind the screen */
 static bool title_scene(void) {
-  return state == S_TITLE || state == S_HELP || state == S_MISSIONS || (state == S_QUIT && back_to == S_TITLE);
+  return state == S_TITLE || state == S_HELP || state == S_MISSIONS || (state == S_QUIT && back_to == S_TITLE) ||
+         (state == S_ADMIN && admin_from == S_TITLE);
 }
 
 static void go(int s) {
@@ -164,6 +166,72 @@ static void shop_buy(void) {
   save_write();
 }
 
+/* ---------------------------------------------------------------- the admin panel (1 or 3 on the title or the pause) */
+enum { AD_COINS, AD_KEYS, AD_BEST, AD_MULT, AD_BOARDS, AD_HEADSTARTS, AD_BOOSTERS, AD_UNLOCK, AD_SAVE, AD_ROWS };
+#define MAX_MSET 29   /* multiplier x30 */
+static const char *const admin_names[AD_SAVE] = {"Coins (10,000)", "Keys (100)", "Best score (50,000)", "Multiplier (1)",
+                                                 "Hoverboards (10)", "Headstarts (10)", "Score boosters (10)", "Unlock everything"};
+
+static uint32_t bump(uint32_t v, int dir, uint32_t d, uint32_t max) {
+  if (dir > 0) {
+    if (v >= max) return v;
+    return max - v < d ? max : v + d;
+  }
+  return v < d ? 0 : v - d;
+}
+
+static bool all_unlocked(void) {
+  for (int i = 0; i < NUPG; i++)
+    if (pg.upg[i] < MAXUPG) return false;
+  return pg.chars == (1 << NCHARS) - 1 && pg.ownboards == (1 << NBOARDS) - 1;
+}
+
+static void admin_edit(int row, int dir) {
+  switch (row) {
+    case AD_COINS: pg.coins = bump(pg.coins, dir, 10000, 999999999u); break;
+    case AD_KEYS: pg.keys = bump(pg.keys, dir, 100, 99999); break;
+    case AD_BEST: pg.best = bump(pg.best, dir, 50000, 999999999u); break;
+    case AD_MULT: {
+      int m = (int)pg.mset + dir;
+      if (m < 0) m = 0;
+      if (m > MAX_MSET) m = MAX_MSET;
+      if (admin_from == S_PAUSE) run.multiplier += m - (int)pg.mset;   /* the run in progress follows */
+      pg.mset = (uint8_t)m;
+      break;
+    }
+    case AD_BOARDS: pg.boards = (uint16_t)bump(pg.boards, dir, 10, 999); break;
+    case AD_HEADSTARTS: pg.headstarts = (uint16_t)bump(pg.headstarts, dir, 10, 999); break;
+    case AD_BOOSTERS: pg.boosters = (uint16_t)bump(pg.boosters, dir, 10, 999); break;
+    case AD_UNLOCK:
+      pg.chars = (uint8_t)((1 << NCHARS) - 1);
+      pg.ownboards = (uint8_t)((1 << NBOARDS) - 1);
+      for (int i = 0; i < NUPG; i++) pg.upg[i] = MAXUPG;
+      break;
+  }
+}
+
+static void admin_close(void) {
+  save_write();
+  go(admin_from);
+}
+
+static void admin_step(uint32_t pressed) {
+  if (pressed & K_BACK) {
+    admin_close();
+    return;
+  }
+  if (pressed & K_UP && sel > 0) sel--;
+  if (pressed & K_DOWN && sel < AD_ROWS - 1) sel++;
+  if (sel == AD_SAVE) {
+    if (pressed & K_OK) admin_close();
+    return;
+  }
+  int dir = 0;
+  if (pressed & (K_RIGHT | K_OK)) dir = 1;
+  else if (pressed & K_LEFT) dir = -1;
+  if (dir) admin_edit(sel, dir);
+}
+
 /* ---------------------------------------------------------------- a 60th of a second */
 static void camera_follow(void) {
   float tx = pl.x * 0.75f, ty = CAM_Y + pl.ground * 0.85f + (pl.y - pl.ground) * 0.35f;
@@ -188,7 +256,9 @@ void app_step(uint32_t keys, uint32_t pressed) {
   if (note_t > 0) note_t -= DT;
   if (pressed & K_HOME) {
     /* save and quit, from anywhere: a run's coins and progress are kept */
-    if (state == S_RUN || state == S_PAUSE || state == S_SAVEME || (state == S_QUIT && back_to == S_PAUSE)) run_bank();
+    if (state == S_RUN || state == S_PAUSE || state == S_SAVEME || (state == S_QUIT && back_to == S_PAUSE) ||
+        (state == S_ADMIN && admin_from == S_PAUSE))
+      run_bank();
     else save_write();
     app_running = false;
     return;
@@ -202,6 +272,11 @@ void app_step(uint32_t keys, uint32_t pressed) {
       }
       break;
     case S_TITLE:
+      if (pressed & (K_ONE | K_THREE)) {
+        admin_from = S_TITLE;
+        go(S_ADMIN);
+        break;
+      }
       /* OK plays; Down goes to the buttons below: the shop, the missions, how to play */
       if (sel == 0) {
         if (pressed & K_OK) start_run();
@@ -244,6 +319,11 @@ void app_step(uint32_t keys, uint32_t pressed) {
       }
       break;
     case S_PAUSE:
+      if (pressed & (K_ONE | K_THREE)) {
+        admin_from = S_PAUSE;
+        go(S_ADMIN);
+        break;
+      }
       /* QUIT (1) on the left, RESUME (0) on the right */
       if (pressed & (K_LEFT | K_UP)) sel = 1;
       if (pressed & (K_RIGHT | K_DOWN)) sel = 0;
@@ -287,6 +367,9 @@ void app_step(uint32_t keys, uint32_t pressed) {
       break;
     case S_MISSIONS:
       if (pressed & (K_BACK | K_OK)) go(S_TITLE), sel = 2;
+      break;
+    case S_ADMIN:
+      admin_step(pressed);
       break;
     case S_QUIT:
       /* QUIT (1) on the left, stay (0) on the right */
@@ -898,8 +981,37 @@ static void shop_overlay(void) {
   } else if (band(222, 16)) hint(160, 224, "OK", "buy, choose", "Left Right", "shelves");
 }
 
+static void admin_overlay(void) {
+  d_dim(150);
+  popup(10, 2, 300, 212, "Admin");
+  for (int i = 0; i < AD_SAVE; i++) {
+    int y = 31 + i * 18;
+    if (!band(y - 2, 20)) continue;
+    d_rrect(14, y, 292, 16, 6, C(sel == i ? 0xFFE680 : 0xFFFFFF), 255);
+    char v[16];
+    switch (i) {
+      case AD_COINS: fmt(v, pg.coins, true); break;
+      case AD_KEYS: fmt(v, pg.keys, true); break;
+      case AD_BEST: fmt(v, pg.best, true); break;
+      case AD_MULT:
+        v[0] = 'x';
+        fmt(v + 1, (uint32_t)pg.mset + 1, false);
+        break;
+      case AD_BOARDS: fmt(v, pg.boards, false); break;
+      case AD_HEADSTARTS: fmt(v, pg.headstarts, false); break;
+      case AD_BOOSTERS: fmt(v, pg.boosters, false); break;
+      default: strcpy(v, all_unlocked() ? "Done" : "Press OK"); break;
+    }
+    d_text(&font_small, 22, y + 12, admin_names[i], C(TEXT_BLUE), 255);
+    d_text(&font_small, 298 - d_text_width(&font_small, v), y + 12, v, C(TITLE_BLUE), 255);
+  }
+  button(90, 182, 140, 22, &sl_green, "Save and Close", sel == AD_SAVE);
+  if (band(220, 16)) hint(160, 222, "Up Down", "row", "Left Right", "change");
+}
+
 static void overlay(void) {
   switch (state) {
+    case S_ADMIN: admin_overlay(); break;
     case S_HELP: help_overlay(); break;
     case S_TITLE: title_overlay(); break;
     case S_RUN:
@@ -967,7 +1079,7 @@ void app_draw(void) {
     return;
   }
   /* the screens over a picture that stands still */
-  bool still = state == S_RESULTS || state == S_PAUSE || state == S_QUIT || state == S_MISSIONS || state == S_HELP;
+  bool still = state == S_RESULTS || state == S_PAUSE || state == S_QUIT || state == S_MISSIONS || state == S_HELP || state == S_ADMIN;
   if (still && drawn && state_t > 0.5f) return;
   drawn = true;
   draw_world();

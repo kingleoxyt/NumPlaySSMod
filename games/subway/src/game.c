@@ -27,8 +27,8 @@ Progress pg;
 Spark sparks[NSPARKS];
 static int next_spark;
 
-const char *const char_names[NCHARS] = {"Jake", "Tricky", "Fresh", "Spike", "KingLeox"};
-const uint32_t char_price[NCHARS] = {0, 6000, 12000, 20000, 30000};
+const char *const char_names[NCHARS] = {"Jake", "Tricky", "Fresh", "Spike", "KingLeox", "KingLeox Or", "KingLeox Diamant", "KingLeox Rainbow"};
+const uint32_t char_price[NCHARS] = {0, 6000, 12000, 20000, 30000, 60000, 120000, 200000};
 const char *const board_names[NBOARDS] = {"Hoverboard", "Bouncer", "Daredevil"};
 const char *const board_power[NBOARDS] = {"The classic", "Super jump", "Speed up"};
 const uint32_t board_price[NBOARDS] = {0, 7500, 15000};

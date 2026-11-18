@@ -61,7 +61,10 @@ typedef struct {
 } Texture;
 extern const Texture *const r_tex[];   /* the game's textures, by number (data.c) */
 #define TX_KINGLEOX 46   /* the one after them: skin.c */
-extern const Texture tx_kingleox;
+#define TX_KINGLEOX_OR 47
+#define TX_DIAMANT 48
+#define TX_RAINBOW 49
+extern const Texture tx_kingleox, tx_kingleox_or, tx_diamant, tx_rainbow;
 
 /* polygons: their corners in order (clockwise on the screen when seen from the front: the back is not
  * drawn unless P_TWOSIDED), a colour already lit (r_shade) */

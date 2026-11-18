@@ -17,10 +17,10 @@ void anim_step(Anim *an, float dt);
 float anim_length(const Clip *c);
 bool anim_done(const Anim *an);   /* a clip that does not loop is at its end */
 
-enum { WHO_JAKE, WHO_TRICKY, WHO_FRESH, WHO_SPIKE, WHO_INSPECTOR, WHO_DOG, WHO_KINGLEOX };
+enum { WHO_JAKE, WHO_TRICKY, WHO_FRESH, WHO_SPIKE, WHO_INSPECTOR, WHO_DOG, WHO_KINGLEOX, WHO_KINGLEOX_OR, WHO_DIAMANT, WHO_RAINBOW };
 /* the player's character number (the shop's) as a model: the first four are the models' own numbers */
-static inline int char_who(int c) { return c < 4 ? c : WHO_KINGLEOX; }
-extern Model model_kingleox;   /* skin.c: the runner's model with the KingLeox picture; made by skin_init */
+static inline int char_who(int c) { return c < 4 ? c : WHO_KINGLEOX + (c - 4); }
+extern Model model_kingleox, model_kingleox_or, model_diamant, model_rainbow;   /* skin.c: the runner's model with the KingLeox picture; made by skin_init */
 void skin_init(void);
 /* a model standing at `at` (its feet), turned by yaw about the upright (0: facing ahead, +z), leaning forward by
  * lean (radians, about its hips); light: 1 outside, less in a tunnel */

@@ -13,7 +13,10 @@
 #define GUARD 1900.0f    /* (so they may lie at most this far from the screen's middle) */
 
 enum { K_FLAT, K_SHADE, K_TEX, K_PERSP };
-static inline const Texture *tex_of(int n) { return n >= TX_KINGLEOX ? &tx_kingleox : r_tex[n]; }
+static inline const Texture *tex_of(int n) {
+  if (n < TX_KINGLEOX) return r_tex[n];
+  return n == TX_KINGLEOX ? &tx_kingleox : n == TX_KINGLEOX_OR ? &tx_kingleox_or : n == TX_DIAMANT ? &tx_diamant : &tx_rainbow;
+}
 
 typedef struct {
   float a, b, c;         /* its depth at (sx, sy): a sx + b sy + c */

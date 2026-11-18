@@ -60,6 +60,8 @@ typedef struct {
   const uint16_t *pal;     /* RGB565 */
 } Texture;
 extern const Texture *const r_tex[];   /* the game's textures, by number (data.c) */
+#define TX_KINGLEOX 46   /* the one after them: skin.c */
+extern const Texture tx_kingleox;
 
 /* polygons: their corners in order (clockwise on the screen when seen from the front: the back is not
  * drawn unless P_TWOSIDED), a colour already lit (r_shade) */

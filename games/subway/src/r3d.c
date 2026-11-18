@@ -13,6 +13,7 @@
 #define GUARD 1900.0f    /* (so they may lie at most this far from the screen's middle) */
 
 enum { K_FLAT, K_SHADE, K_TEX, K_PERSP };
+static inline const Texture *tex_of(int n) { return n >= TX_KINGLEOX ? &tx_kingleox : r_tex[n]; }
 
 typedef struct {
   float a, b, c;         /* its depth at (sx, sy): a sx + b sy + c */
@@ -234,7 +235,7 @@ static bool emit_fx(const CV *p, int n, int kind, uint16_t color, int flags, int
   for (int i = 1; i < n; i++) wmax = w[i] > wmax ? w[i] : wmax;
   q->near = (uint8_t)(wmax >= (int64_t)65535 << 16 ? 255 : (int)(wmax >> 24));
   if (kind == K_PERSP) {
-    const Texture *t = r_tex[color];
+    const Texture *t = tex_of(color);
     int64_t far16 = fx_from_float(r_far, 16), h1 = fx_from_float(r_haze1, 16);
     if (t->clear && !avg && nuv >= MAXT) return true;
     if ((!t->clear && (zsum * 5 > h1 * 3 * n || nuv >= MAXT)) || (avg && (zsum > far16 * n || nuv >= MAXT))) {
@@ -369,7 +370,7 @@ static void emit(CV *p, int n, int kind, uint16_t color, int flags, int alpha, u
   if (kind == K_PERSP) {
     /* far off, a picture is only its average colour (color already holds it when kind comes back flat); one with
      * too many holes for that is drawn as itself however far it is, in the haze */
-    const Texture *t = r_tex[color];
+    const Texture *t = tex_of(color);
     if (t->clear && !avg && nuv >= MAXT) return;
     if ((!t->clear && (zm > r_haze1 * 0.6f || nuv >= MAXT)) || (avg && (zm > r_far || nuv >= MAXT))) {
       /* (the palette's first useful colour stands for it: the tool puts the average there; or the face's own) */
@@ -659,7 +660,7 @@ static void raster(const Poly *q) {
 #endif
   uint16_t col = q->color;
   int kind = q->kind;
-  const Texture *tx = kind == K_TEX || kind == K_PERSP ? r_tex[q->color] : NULL;
+  const Texture *tx = kind == K_TEX || kind == K_PERSP ? tex_of(q->color) : NULL;
   int alpha = q->alpha >> 3;
   float qa = q->a > 30000 ? 30000 : q->a < -30000 ? -30000 : q->a;   /* (seen nearly edge-on) */
   int32_t da = (int32_t)(qa * 65536.0f);
@@ -864,7 +865,7 @@ static void raster_fx(const Poly *q) {
   if (!ne[0] || !ne[1]) return;
   uint16_t col = q->color;
   int kind = q->kind;
-  const Texture *tx = kind == K_TEX || kind == K_PERSP ? r_tex[q->color] : NULL;
+  const Texture *tx = kind == K_TEX || kind == K_PERSP ? tex_of(q->color) : NULL;
   int alpha = q->alpha >> 3;
   int64_t za = fx_from_float(q->a, 16), zb16 = fx_from_float(q->b, 16), zc = fx_from_float(q->c, 16) + ((za + zb16) >> 1);
   int32_t da = za > (int64_t)30000 << 16 ? 30000 << 16 : za < -((int64_t)30000 << 16) ? -(30000 << 16) : (int32_t)za;

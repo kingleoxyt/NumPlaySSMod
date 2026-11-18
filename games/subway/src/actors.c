@@ -192,10 +192,11 @@ static void place_bones(const Anim *an, const M34 *root) {
   }
 }
 
-static const Model *const people[6] = {&model_jake, &model_tricky, &model_fresh, &model_spike, &model_inspector, &model_dog};
+static const Model *const people[7] = {&model_jake, &model_tricky, &model_fresh, &model_spike, &model_inspector, &model_dog, &model_kingleox};
 
 void actor_draw(int who, const Anim *an, V3 at, float yaw, float lean, float light) {
   if (!an->a) return;
+  if (who == WHO_KINGLEOX) skin_init();
   const Model *m = people[who];
   M34 root = translate(at.x, at.y, at.z), ry = rot_y(yaw);
   root = mul(&root, &ry);

@@ -130,7 +130,7 @@ int run_save_cost(void);       /* keys to be saved now */
 void run_bank(void);           /* the coins and the progress go to the save (the run's end, or Home) */
 
 /* ---------------------------------------------------------------- what is kept */
-#define NCHARS 4
+#define NCHARS 5
 #define NBOARDS 3
 #define NUPG 4
 typedef struct {

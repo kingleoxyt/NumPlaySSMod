@@ -462,7 +462,7 @@ static void runner_anim(float dt) {
 }
 
 static void draw_runner(void) {
-  int who = pg.character;
+  int who = char_who(pg.character);
   float lt = scene_light(pl.z);
   bool title = title_scene();
   float yaw = title ? 3.14159f : 0;
@@ -1050,11 +1050,11 @@ static void draw_shop(void) {
     r_poly(st, 8, 0x1A4F9A, P_NOHAZE, 0);
     if (shop_tab == TAB_CHARS) {
       anim_play(&a_shop, &clip_runner_idle, 0, 0);
-      actor_draw(shop_sel, &a_shop, (V3){0, 0, 0}, yaw, 0, 1);
+      actor_draw(char_who(shop_sel), &a_shop, (V3){0, 0, 0}, yaw, 0, 1);
     } else {
       anim_play(&a_shop, &clip_runner_board, 0, 0);
       board_draw((V3){0, 0.05f, 0}, shop_sel, yaw, clock, 1);
-      actor_draw(pg.character, &a_shop, (V3){0, 0.23f, 0}, yaw, 0, 1);
+      actor_draw(char_who(pg.character), &a_shop, (V3){0, 0.23f, 0}, yaw, 0, 1);
     }
   }
   r_render(shop_background, overlay);
